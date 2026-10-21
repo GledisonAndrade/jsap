@@ -1,6 +1,6 @@
 # Caça aos Bugs JS
 
-Aplicação estática para praticar JavaScript com 35 desafios interativos. A interface usa apenas HTML, CSS e JavaScript nativo; não precisa de backend, dependências ou etapa de compilação. O progresso fica salvo no armazenamento local do navegador.
+Aplicação estática para praticar JavaScript com 35 desafios interativos. A interface usa apenas HTML, CSS e JavaScript nativo; não precisa de backend, dependências ou etapa de compilação. Os scripts são carregados sem módulos para funcionar tanto ao abrir `index.html` diretamente quanto por um servidor local. O progresso fica salvo no armazenamento local do navegador.
 
 ## Usar no XAMPP
 
@@ -8,7 +8,7 @@ Aplicação estática para praticar JavaScript com 35 desafios interativos. A in
 2. Inicie o Apache pelo painel do XAMPP.
 3. Acesse `http://localhost/jsap/`.
 
-As alterações nos arquivos são carregadas diretamente pelo navegador. Se uma versão antiga continuar aparecendo, atualize a página sem usar o cache.
+Também é possível abrir o arquivo `index.html` diretamente no navegador. As alterações nos arquivos são carregadas diretamente pelo navegador. Se uma versão antiga continuar aparecendo, atualize a página sem usar o cache.
 
 ## Estrutura
 
