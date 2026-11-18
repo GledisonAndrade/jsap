@@ -61,6 +61,12 @@
     }
   }
 
+  function forget(id) {
+    const memory = loadMemory();
+    delete memory[id];
+    saveMemory(memory);
+  }
+
   function isDueForReview(item) {
     const days = (Date.now() - new Date(item.lastSeenAt).getTime()) / 86400000;
     return days >= CONFIG.revisaoDias;
@@ -89,5 +95,5 @@
     ).join("\n\n———\n\n");
   }
 
-  window.Mart = { CONFIG, getSolution, remember, loadMemory, clearMemory, isDueForReview, ask };
+  window.Mart = { CONFIG, getSolution, remember, loadMemory, clearMemory, forget, isDueForReview, ask };
 })();

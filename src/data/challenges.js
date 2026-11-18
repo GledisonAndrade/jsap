@@ -348,5 +348,155 @@ window.ALL_CHALLENGES = [
     hint: "Instancie o objeto adequadamente usando o construtor correto: 'const pessoa = new Humano();'.",
     difficulty: "Fácil",
     topic: "POO"
+  },
+  {
+    id: 36,
+    title: "Validando uma entrada de formulário",
+    desc: "Antes de processar um formulário, confirme que o e-mail possui texto antes e depois do @. A função deve retornar false para uma entrada inválida.",
+    code: "function emailValido(email) {\n  return true;\n}\nconsole.log(emailValido('ana.exemplo.com'));",
+    output: ["false"],
+    hint: "Use includes('@') ou verifique o resultado de indexOf('@').",
+    difficulty: "Fácil",
+    topic: "Validação de formulários"
+  },
+  {
+    id: 37,
+    title: "Formatando moeda para uma página",
+    desc: "Uma interface de compras precisa exibir o preço 1299.9 como uma moeda brasileira legível.",
+    code: "const preco = 1299.9;\nconsole.log(preco);",
+    output: ["R$ 1.299,90"],
+    hint: "Use Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(preco).",
+    difficulty: "Fácil",
+    topic: "Internacionalização"
+  },
+  {
+    id: 38,
+    title: "Calculadora universal: operações",
+    desc: "Projeto guiado — etapa 1 de 5. Comece pela lógica da Calculadora Universal, separando os valores e o operador para implementar soma, subtração, multiplicação e divisão. O resultado de 18 dividido por 3 deve ser 6.",
+    code: "function calcular(a, operador, b) {\n  return 0;\n}\nconsole.log(calcular(18, '/', 3));",
+    output: ["6"],
+    hint: "Use switch (operador) para selecionar a operação e valide divisão por zero.",
+    difficulty: "Médio",
+    topic: "Projeto: Calculadora"
+  },
+  {
+    id: 39,
+    title: "Calculadora universal: proteger entradas",
+    desc: "Projeto guiado — etapa 2 de 5. Proteja a calculadora contra divisão por zero antes de conectar a lógica à interface.",
+    code: "function dividir(a, b) {\n  return a / b;\n}\nconsole.log(dividir(8, 0));",
+    output: ["Erro: divisão por zero"],
+    hint: "Verifique se b === 0 antes de efetuar a divisão.",
+    difficulty: "Médio",
+    topic: "Projeto: Calculadora"
+  },
+  {
+    id: 40,
+    title: "Montando um catálogo de site",
+    desc: "Projeto guiado — etapa 3 de 5. Comece a página do site organizando produtos como dados e transformando-os em cartões para o catálogo.",
+    code: "const produtos = [{ nome: 'Caderno', preco: 20 }, { nome: 'Caneta', preco: 5 }];\nconst titulos = produtos.map(produto => produto.nome);\nconsole.log(titulos);",
+    output: ["Caderno — R$ 20 | Caneta — R$ 5"],
+    hint: "Dentro do map, retorne `${produto.nome} — R$ ${produto.preco}` e depois use join(' | ').",
+    difficulty: "Médio",
+    topic: "Projeto: Página de site"
+  },
+  {
+    id: 41,
+    title: "Filtrando conteúdo de uma página",
+    desc: "Projeto guiado — etapa 4 de 5. Implemente a busca do catálogo para filtrar produtos pelo termo digitado, sem diferenciar maiúsculas de minúsculas.",
+    code: "const produtos = ['Teclado', 'Mouse', 'Monitor'];\nconst termo = 'mo';\nconst encontrados = produtos;\nconsole.log(encontrados);",
+    output: ["Mouse,Monitor"],
+    hint: "Use filter e compare nome.toLowerCase().includes(termo.toLowerCase()).",
+    difficulty: "Médio",
+    topic: "Projeto: Página de site"
+  },
+  {
+    id: 42,
+    title: "Gerando navegação a partir de dados",
+    desc: "Projeto guiado — etapa 5 de 5. Finalize a navegação do site e integre os componentes preparados. A prévia funcional da calculadora e do catálogo acompanha esta lição.",
+    code: "const links = ['Início', 'Cursos', 'Contato'];\nconst menu = links.join('');\nconsole.log(menu);",
+    output: ["Início | Cursos | Contato"],
+    hint: "Passe o separador ' | ' para o método join.",
+    difficulty: "Fácil",
+    topic: "Projeto: Página de site"
+  },
+  {
+    id: 43,
+    title: "Automatizador: executar tarefas em sequência",
+    desc: "Um automatizador simples processa uma fila de tarefas na ordem recebida. Gere um registro de execução com map.",
+    code: "const tarefas = ['backup', 'relatorio', 'notificacao'];\nconst execucoes = tarefas;\nconsole.log(execucoes);",
+    output: ["Executada: backup | Executada: relatorio | Executada: notificacao"],
+    hint: "Mapeie cada tarefa para `Executada: ${tarefa}` e una os resultados com join(' | ').",
+    difficulty: "Médio",
+    topic: "Projeto: Automatizador"
+  },
+  {
+    id: 44,
+    title: "Automatizador: tentativas e falhas",
+    desc: "Um processo deve tentar até três vezes antes de informar falha. Conte quantas tentativas foram realizadas.",
+    code: "let tentativas = 0;\nwhile (tentativas < 1) {\n  tentativas++;\n}\nconsole.log(tentativas);",
+    output: ["3"],
+    hint: "A condição do while deve permitir três execuções: tentativas < 3.",
+    difficulty: "Fácil",
+    topic: "Projeto: Automatizador"
+  },
+  {
+    id: 45,
+    title: "Automatizador: agendar próxima execução",
+    desc: "Calcule a próxima execução de uma rotina diária, adicionando 24 horas à data fornecida. Exiba o resultado em ISO.",
+    code: "const hoje = new Date('2025-01-01T10:00:00.000Z');\nconst proxima = hoje;\nconsole.log(proxima.toISOString());",
+    output: ["2025-01-02T10:00:00.000Z"],
+    hint: "Crie uma nova data somando 24 * 60 * 60 * 1000 ao timestamp de hoje.",
+    difficulty: "Médio",
+    topic: "Projeto: Automatizador"
+  },
+  {
+    id: 46,
+    title: "Plataforma web: configuração por ambiente",
+    desc: "Uma aplicação deve escolher a URL de API correta conforme o ambiente, sem espalhar condicionais pela página.",
+    code: "const urls = { desenvolvimento: '/api-local', producao: '/api' };\nconst ambiente = 'producao';\nconsole.log(urls.desenvolvimento);",
+    output: ["/api"],
+    hint: "Acesse o objeto com a variável ambiente: urls[ambiente].",
+    difficulty: "Médio",
+    topic: "Plataforma web"
+  },
+  {
+    id: 47,
+    title: "Plataforma web: tratar resposta assíncrona",
+    desc: "Transforme uma promessa resolvida em uma mensagem de sucesso. A aplicação deve usar async/await para lidar com o resultado.",
+    code: "async function carregar() {\n  const resposta = await Promise.resolve('dados carregados');\n  console.log(resposta);\n}\nawait carregar();",
+    output: ["dados carregados"],
+    hint: "Use `await` ao atribuir a promessa a resposta. O runner registra a saída da continuação assíncrona.",
+    difficulty: "Médio",
+    topic: "Plataforma web"
+  },
+  {
+    id: 48,
+    title: "Plataforma web: contar erros por tipo",
+    desc: "Monitore eventos de uma aplicação agregando quantas vezes cada tipo ocorreu. O relatório deve contar dois avisos.",
+    code: "const eventos = ['aviso', 'erro', 'aviso'];\nconst totalAvisos = 0;\nconsole.log(totalAvisos);",
+    output: ["2"],
+    hint: "Filtre eventos iguais a 'aviso' e consulte o length do array resultante.",
+    difficulty: "Médio",
+    topic: "Plataforma web"
+  },
+  {
+    id: 49,
+    title: "Criando um resumo de desempenho",
+    desc: "Uma plataforma de aprendizagem precisa calcular a porcentagem de conclusão com base nas lições concluídas.",
+    code: "function progresso(concluidas, total) {\n  return 0;\n}\nconsole.log(progresso(15, 50) + '%');",
+    output: ["30%"],
+    hint: "Divida concluídas por total, multiplique por 100 e arredonde o resultado.",
+    difficulty: "Fácil",
+    topic: "Plataforma web"
+  },
+  {
+    id: 50,
+    title: "Projeto final: plataforma Web em funcionamento",
+    desc: "Integre a calculadora, o catálogo do site e o automatizador em uma plataforma funcional. Use o painel abaixo para testar o projeto final e combine filter e reduce para contar as tarefas concluídas.",
+    code: "const tarefas = [\n  { titulo: 'Backup', concluida: true },\n  { titulo: 'Relatório', concluida: false },\n  { titulo: 'Deploy', concluida: true }\n];\nconst totalConcluidas = 0;\nconsole.log(totalConcluidas);",
+    output: ["2"],
+    hint: "Filtre tarefas com concluida === true e use length; ou some 1 com reduce. A prévia abaixo já permite testar as funcionalidades integradas.",
+    difficulty: "Médio",
+    topic: "Projeto: Painel web"
   }
 ];

@@ -10,6 +10,7 @@ const state = {
   testResult: { tested: false, success: false, message: "" },
   resolvedIds: [],
   attemptsMap: {},
+  recordsMap: {},
   streak: 1,
   aiTip: "",
   copied: false,
@@ -17,6 +18,11 @@ const state = {
   view: "licoes",
   martExplain: null,
   martAnswer: "",
+  lockedMessage: "",
+  projectSearch: "",
+  calculatorResult: "Preencha os valores para começar.",
+  automationIndex: 0,
+  automationLogs: [],
 };
 
 function escapeHtml(value) {
@@ -43,10 +49,17 @@ function loadProgress() {
     if (parsed.attemptsMap && typeof parsed.attemptsMap === "object") {
       state.attemptsMap = parsed.attemptsMap;
     }
+    if (parsed.recordsMap && typeof parsed.recordsMap === "object") {
+      state.recordsMap = parsed.recordsMap;
+    }
     if (typeof parsed.streak === "number") state.streak = parsed.streak;
   } catch (error) {
     console.error("Não foi possível carregar o progresso salvo:", error);
   }
+
+  state.currentIndex = getNextLessonIndex();
+  const challenge = ALL_CHALLENGES[state.currentIndex];
+  state.editorCode = state.recordsMap[challenge.id]?.code ?? challenge.code;
 }
 
 function saveProgress() {
@@ -54,6 +67,7 @@ function saveProgress() {
     localStorage.setItem(progressKey, JSON.stringify({
       resolvedIds: state.resolvedIds,
       attemptsMap: state.attemptsMap,
+      recordsMap: state.recordsMap,
       streak: state.streak,
     }));
   } catch (error) {
@@ -65,15 +79,25 @@ function getActiveChallenge() {
   return ALL_CHALLENGES[state.currentIndex] ?? ALL_CHALLENGES[0];
 }
 
+function getNextLessonIndex() {
+  const nextIndex = ALL_CHALLENGES.findIndex((challenge) => !state.resolvedIds.includes(challenge.id));
+  return nextIndex < 0 ? ALL_CHALLENGES.length - 1 : nextIndex;
+}
+
+function isLessonAccessible(index) {
+  return index >= 0 && index <= getNextLessonIndex();
+}
+
 function renderChallengeList() {
   return ALL_CHALLENGES.map((challenge, index) => {
     const isActive = index === state.currentIndex;
     const isResolved = state.resolvedIds.includes(challenge.id);
+    const isLocked = !isLessonAccessible(index);
     const attempts = state.attemptsMap[challenge.id] || 0;
 
     return `
-      <button class="challenge-item${isActive ? " is-active" : ""}" type="button"
-        data-action="select-challenge" data-index="${index}"${isActive ? ' aria-current="true"' : ""}>
+      <button class="challenge-item${isActive ? " is-active" : ""}${isLocked ? " is-locked" : ""}" type="button"
+        data-action="select-challenge" data-index="${index}"${isActive ? ' aria-current="true"' : ""}${isLocked ? ` aria-label="Lição ${challenge.id}: ${escapeHtml(challenge.title)}. Bloqueada; conclua a lição ${ALL_CHALLENGES[getNextLessonIndex()].id} primeiro"` : ""}>
         <span class="challenge-number${isResolved ? " is-resolved" : ""}">${challenge.id}</span>
         <span class="challenge-item-copy">
           <span class="challenge-item-title">${escapeHtml(challenge.title)}</span>
@@ -81,7 +105,7 @@ function renderChallengeList() {
         </span>
         <span class="challenge-item-status">
           ${attempts > 0 ? `<span class="attempt-count">${attempts}x</span>` : ""}
-          ${isResolved ? '<span class="check-mark" aria-label="Resolvido">✓</span>' : ""}
+          ${isLocked ? '<span class="lesson-lock" aria-label="Bloqueada">🔒</span>' : isResolved ? '<span class="check-mark" aria-label="Resolvido">✓</span>' : ""}
         </span>
       </button>`;
   }).join("");
@@ -160,11 +184,11 @@ function render() {
         </div>
       </div>` : ""}
     <header class="topbar">
-      <a class="brand" href="./" aria-label="Caça aos Bugs JS - início">
+      <a class="brand" href="./" aria-label="Trilha Web - início">
         <span class="brand-mark" aria-hidden="true">JS</span>
         <span class="brand-copy">
-          <span class="brand-title">Caça aos Bugs JS <span class="challenge-badge">${totalChallenges} desafios</span></span>
-          <span class="brand-subtitle">Aprenda JavaScript resolvendo desafios no navegador</span>
+          <span class="brand-title">Trilha Web <span class="challenge-badge">${totalChallenges} lições</span></span>
+          <span class="brand-subtitle">Aprenda JavaScript e desenvolvimento web com prática</span>
         </span>
       </a>
       <div class="topbar-stats">
@@ -209,6 +233,7 @@ function render() {
       </aside>
 
       <section class="workspace" aria-label="Área do desafio">
+        ${state.lockedMessage ? `<div class="locked-notice" role="alert">${escapeHtml(state.lockedMessage)}</div>` : ""}
         <article class="challenge-card">
           <div class="challenge-card-top">
             <div class="challenge-tags">
@@ -218,7 +243,8 @@ function render() {
             </div>
             <div class="challenge-navigation">
               <button class="secondary-button" type="button" data-action="previous" ${state.currentIndex === 0 ? "disabled" : ""}>← <span>Anterior</span></button>
-              <button class="secondary-button" type="button" data-action="next" ${state.currentIndex === totalChallenges - 1 ? "disabled" : ""}><span>Próximo</span> →</button>
+              <button class="secondary-button" type="button" data-action="next" ${state.currentIndex >= getNextLessonIndex() || state.currentIndex === totalChallenges - 1 ? "disabled" : ""}><span>Próximo</span> →</button>
+              <button class="secondary-button lesson-reset-button" type="button" data-action="reset-lesson">↻ <span>Resetar esta lição</span></button>
             </div>
           </div>
           <h1>${challenge.id}. ${escapeHtml(challenge.title)}</h1>
@@ -266,23 +292,201 @@ function render() {
             <div class="tip-heading"><span aria-hidden="true">✦</span><div><h2>Dica do desafio</h2><span>Disponível offline</span></div></div>
             <p>${escapeHtml(state.aiTip)}</p>
           </section>` : ""}
+        ${renderLessonProject(challenge)}
+        ${renderSupportPanel(challenge)}
         ${renderMartPanel(challenge)}
       </section>
     </main>`}
     <footer class="site-footer">
-      <span>JavaScript Bug Hunt © 2026 · Desenvolvido para aprendizagem ativa de JavaScript.</span>
+      <span>Trilha Web © 2026 · Aprendizado prático de JavaScript e desenvolvimento web.</span>
       <strong>GA automação engenheiro desenvolvedor : Gledison Andrade</strong>
     </footer>`;
 }
 
 const NAV_ITEMS = [
   ["licoes", "Lições"],
+  ["dashboard", "Dashboard"],
+  ["projetos", "Laboratório de automação"],
+  ["carreira", "Trilha de carreira"],
   ["sistema", "Instruções e objetivo"],
   ["memoria", "Memória do Mart"],
   ["parametros", "Parâmetros de desenvolvimento"],
   ["ajuda", "Ajuda"],
   ["sobre", "Sobre o sistema"],
 ];
+
+const CAREER_LEVELS = [
+  { name: "Junior", threshold: 0, next: 12, skills: "Fundamentos de JavaScript, tipos, condições e funções." },
+  { name: "Pleno", threshold: 12, next: 27, skills: "Estruturas de dados, depuração, formulários e projetos interativos." },
+  { name: "Senior", threshold: 27, next: 40, skills: "Arquitetura de funcionalidades, testes, automações e boas decisões técnicas." },
+  { name: "Engenheiro de Desenvolvimento Web e Plataforma", threshold: 40, next: 50, skills: "Integração assíncrona, métricas, configuração e composição de plataformas web." },
+];
+
+const PROJECT_PRODUCTS = [
+  { name: "Teclado mecânico", category: "Acessórios", price: 249.9, description: "Teclas confortáveis para estudar e trabalhar." },
+  { name: "Mouse sem fio", category: "Acessórios", price: 89.9, description: "Precisão e liberdade para o seu espaço." },
+  { name: "Monitor Full HD", category: "Monitores", price: 799, description: "Mais espaço para visualizar seus projetos." },
+];
+
+const AUTOMATION_TASKS = ["Validar dados da rotina", "Gerar relatório diário", "Salvar cópia de segurança", "Enviar notificação de conclusão"];
+
+function getCareerLevel(completed = state.resolvedIds.length) {
+  return CAREER_LEVELS.reduce((current, level, index) =>
+    completed >= level.threshold ? index : current, 0);
+}
+
+function renderDashboard() {
+  const completed = state.resolvedIds.length;
+  const nextLesson = ALL_CHALLENGES[getNextLessonIndex()];
+  const records = Object.values(state.recordsMap).sort((a, b) =>
+    new Date(b.completedAt) - new Date(a.completedAt));
+  const levelIndex = getCareerLevel(completed);
+  const level = CAREER_LEVELS[levelIndex];
+  const target = level.next;
+  const levelProgress = completed >= 50
+    ? 100
+    : Math.min(100, Math.round(((completed - level.threshold) / (target - level.threshold)) * 100));
+  const history = records.length ? records.slice(0, 10).map((record) => `
+    <article class="history-item">
+      <div class="memory-head">
+        <strong>Lição ${record.id}. ${escapeHtml(record.title)}</strong>
+        <span>${formatDate(record.completedAt)} · ${record.attempts} tentativa(s)</span>
+      </div>
+      <p><strong>Saída registrada:</strong> ${escapeHtml((record.output || []).join(" / "))}</p>
+      <details><summary>Relembrar código realizado</summary><pre class="mart-code">${escapeHtml(record.code)}</pre></details>
+      <button class="text-button" type="button" data-action="select-challenge" data-index="${ALL_CHALLENGES.findIndex((item) => item.id === record.id)}">Abrir lição</button>
+    </article>`).join("") : '<p class="empty-state">Conclua uma lição para criar seu primeiro registro de execução.</p>';
+
+  return `<main class="page-view dashboard-page">
+    <h1>Dashboard de aprendizado</h1>
+    <p>Acompanhe sua trilha, tarefas executadas e o que já pode revisar. Os registros ficam salvos neste navegador.</p>
+    <section class="dashboard-metrics">
+      <article class="metric-card"><span>Lições concluídas</span><strong>${completed} / ${ALL_CHALLENGES.length}</strong><div class="progress-track"><span style="width:${Math.round(completed / ALL_CHALLENGES.length * 100)}%"></span></div></article>
+      <article class="metric-card"><span>Tentativas realizadas</span><strong>${Object.values(state.attemptsMap).reduce((sum, count) => sum + count, 0)}</strong><small>Inclui testes aprovados e tentativas para aprender com erros.</small></article>
+      <article class="metric-card"><span>Nível atual</span><strong>${escapeHtml(level.name)}</strong><small>${completed >= target ? "Trilha concluída!" : `${completed} de ${target} lições para o próximo marco`}</small></article>
+    </section>
+    <section class="dashboard-level">
+      <div><span class="eyebrow">Próximo marco</span><h2>${completed >= 50 ? "Trilha completa" : escapeHtml(CAREER_LEVELS[Math.min(levelIndex + 1, CAREER_LEVELS.length - 1)].name)}</h2>
+      <p>${escapeHtml(level.skills)}</p></div>
+      <div class="level-progress"><strong>${levelProgress}%</strong><div class="progress-track"><span style="width:${levelProgress}%"></span></div><small>${completed} / ${target} lições</small></div>
+    </section>
+    ${completed < ALL_CHALLENGES.length ? `<section class="continue-card">
+      <div><span class="eyebrow">Continue de onde parou</span><h2>Lição ${nextLesson.id}: ${escapeHtml(nextLesson.title)}</h2>
+      <p>Conclua esta lição para liberar a próxima etapa da trilha.</p></div>
+      <button class="primary-button" type="button" data-action="continue-learning">Continuar lição</button>
+    </section>` : '<section class="continue-card"><div><span class="eyebrow">Parabéns</span><h2>Você concluiu todas as lições!</h2><p>Seu projeto final está disponível na lição 50.</p></div></section>'}
+    <section class="history-section"><div class="section-title"><h2>Tarefas executadas</h2><span>${records.length} registro(s)</span></div>${history}</section>
+  </main>`;
+}
+
+function renderCareer() {
+  const completed = state.resolvedIds.length;
+  const activeLevel = getCareerLevel(completed);
+  const levels = CAREER_LEVELS.map((level, index) => {
+    const reached = completed >= level.threshold;
+    const current = index === activeLevel;
+    const range = index === CAREER_LEVELS.length - 1 ? `${level.threshold}+ lições` : `${level.threshold}–${level.next - 1} lições`;
+    return `<article class="career-card${current ? " is-current" : ""}${reached ? " is-reached" : ""}">
+      <div class="career-card-top"><span class="career-index">${String(index + 1).padStart(2, "0")}</span><span class="career-range">${range}</span></div>
+      <h2>${escapeHtml(level.name)}</h2><p>${escapeHtml(level.skills)}</p>
+      <strong class="career-status">${reached ? (current ? "Nível atual" : "Marco alcançado") : "Próximo marco"}</strong>
+    </article>`;
+  }).join("");
+  return `<main class="page-view career-page">
+    <h1>Trilha de evolução profissional</h1>
+    <p>A evolução é baseada nas lições concluídas e nos projetos praticados. Use os marcos como referência de estudo, não como substituto de experiência profissional.</p>
+    <section class="career-track">${levels}</section>
+    <section class="career-guidance"><h2>Como avançar</h2>
+      <ol><li>Resolva cada lição e leia o material de apoio antes de avançar.</li>
+      <li>Revise no dashboard o código que você executou e os resultados registrados.</li>
+      <li>Nos projetos de calculadora, site e automação, adapte a solução e teste casos inválidos.</li>
+      <li>Ao concluir uma lição novamente, seu registro mais recente será atualizado.</li></ol>
+    </section>
+  </main>`;
+}
+
+function renderCalculatorWidget() {
+  return `<section class="project-panel"><div class="project-heading"><span>01</span><div><h2>Calculadora Universal</h2><p>Soma, subtração, multiplicação, divisão, módulo e potência.</p></div></div>
+    <form class="calculator-form" data-form="calculator">
+      <label>Primeiro valor<input name="a" type="number" step="any" required value="12"></label>
+      <label>Operação<select name="operator"><option value="+">Somar (+)</option><option value="-">Subtrair (−)</option><option value="*">Multiplicar (×)</option><option value="/">Dividir (÷)</option><option value="%">Módulo (%)</option><option value="**">Potência (^)</option></select></label>
+      <label>Segundo valor<input name="b" type="number" step="any" required value="3"></label>
+      <button class="primary-button" type="submit">Calcular</button>
+    </form>
+    <output class="project-result" aria-live="polite">${escapeHtml(state.calculatorResult)}</output>
+  </section>`;
+}
+
+function renderCatalogWidget() {
+  const search = state.projectSearch.trim().toLocaleLowerCase("pt-BR");
+  const products = PROJECT_PRODUCTS.filter((product) =>
+    `${product.name} ${product.category} ${product.description}`.toLocaleLowerCase("pt-BR").includes(search));
+  const productCards = products.length ? products.map((product) => `
+    <article class="product-card"><span>${escapeHtml(product.category)}</span><h3>${escapeHtml(product.name)}</h3>
+      <p>${escapeHtml(product.description)}</p><strong>${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}</strong>
+    </article>`).join("") : '<p class="empty-state">Nenhum produto encontrado.</p>';
+  return `<section class="project-panel site-demo"><div class="project-heading"><span>02</span><div><h2>Catálogo do site</h2><p>Prévia de página com busca e cartões de produto.</p></div></div>
+    <form class="project-search" data-form="project-search"><label class="visually-hidden" for="project-search-input">Buscar produtos</label>
+      <input id="project-search-input" name="q" type="search" value="${escapeHtml(state.projectSearch)}" placeholder="Buscar produto ou categoria">
+      <button class="secondary-button" type="submit">Buscar</button></form>
+    <div class="product-list">${productCards}</div>
+  </section>`;
+}
+
+function renderAutomationWidget() {
+  const taskRows = AUTOMATION_TASKS.map((task, index) => `
+    <li class="${index < state.automationIndex ? "task-done" : ""}">
+      <span>${index < state.automationIndex ? "✓" : `${index + 1}.`}</span>${escapeHtml(task)}
+    </li>`).join("");
+  const automationComplete = state.automationIndex >= AUTOMATION_TASKS.length;
+  return `<section class="project-panel automation-panel"><div class="project-heading"><span>03</span><div><h2>Automatizador de tarefas</h2><p>Simule um fluxo de rotina em etapas.</p></div></div>
+    <ol class="automation-list">${taskRows}</ol>
+    <div class="automation-actions"><button class="primary-button" type="button" data-action="automation-run"${automationComplete ? " disabled" : ""}>${automationComplete ? "Rotina concluída" : "Executar próxima tarefa"}</button>
+      <button class="secondary-button" type="button" data-action="automation-reset">Reiniciar</button></div>
+    ${state.automationLogs.length ? `<p class="automation-log" aria-live="polite">${escapeHtml(state.automationLogs[state.automationLogs.length - 1])}</p>` : ""}
+  </section>`;
+}
+
+function renderLessonProject(challenge) {
+  if ((challenge.id < 38 || challenge.id > 42) && challenge.id !== 50) return "";
+  if (challenge.id === 50) {
+    return `<section class="lesson-project final-project">
+      <div class="project-heading"><span>FINAL</span><div><h2>Projeto final: plataforma Web funcionando</h2><p>Integra a calculadora, o catálogo do site e o automatizador desenvolvidos ao longo da trilha.</p></div></div>
+      <div class="project-grid">${renderCalculatorWidget()}${renderCatalogWidget()}${renderAutomationWidget()}</div>
+    </section>`;
+  }
+
+  const stages = [
+    { id: 38, title: "Lógica da calculadora", detail: "Separar os valores e o operador, depois retornar o resultado da operação." },
+    { id: 39, title: "Validação da calculadora", detail: "Tratar divisão por zero e entradas inválidas antes de calcular." },
+    { id: 40, title: "Estrutura da página", detail: "Organizar produtos como dados e montar cartões reutilizáveis." },
+    { id: 41, title: "Busca do catálogo", detail: "Filtrar os produtos pelo texto digitado, sem diferenciar maiúsculas." },
+    { id: 42, title: "Navegação e integração", detail: "Preparar a navegação do site e conectar os componentes criados." },
+  ];
+  const currentStage = stages.find((stage) => stage.id === challenge.id);
+  const stageList = stages.map((stage, index) => {
+    const completed = state.resolvedIds.includes(stage.id);
+    return `<li class="${completed ? "task-done" : stage.id === challenge.id ? "task-current" : ""}">
+      <span>${completed ? "✓" : `${index + 1}.`}</span><div><strong>Lição ${stage.id}: ${escapeHtml(stage.title)}</strong><small>${escapeHtml(stage.detail)}</small></div>
+    </li>`;
+  }).join("");
+  const widget = challenge.id <= 39 ? renderCalculatorWidget() : renderCatalogWidget();
+  return `<section class="lesson-project">
+    <div class="project-heading"><span>PROJETO</span><div><h2>Construindo a calculadora e o site — etapa ${challenge.id - 37} de 5</h2>
+      <p>${escapeHtml(currentStage.detail)} A calculadora e o catálogo são praticados aqui nas lições, não no laboratório.</p></div></div>
+    <ol class="automation-list project-roadmap">${stageList}</ol>
+    <div class="project-grid">${widget}</div>
+  </section>`;
+}
+
+function renderProjects() {
+  return `<main class="page-view projects-page">
+    <h1>Laboratório de automação</h1>
+    <p>O desenvolvimento da calculadora e do site faz parte das lições 38 a 42. A plataforma integrada fica disponível na lição final 50.</p>
+    <div class="project-grid">${renderAutomationWidget()}</div>
+    <button class="secondary-button" type="button" data-action="select-challenge" data-index="42">Abrir lição 43: automatizador</button>
+  </main>`;
+}
 
 function renderMartPanel(challenge) {
   const solution = Mart.getSolution(challenge.id);
@@ -306,6 +510,18 @@ function renderMartPanel(challenge) {
     </section>`;
 }
 
+function renderSupportPanel(challenge) {
+  const solution = Mart.getSolution(challenge.id);
+  if (!solution) return "";
+  return `<details class="support-card">
+    <summary>Conteúdo de apoio: entenda o código desta lição</summary>
+    <div class="support-content"><h3>${escapeHtml(solution.concept)}</h3>
+      <p>${escapeHtml(solution.why)}</p>
+      <h4>Exemplo de solução</h4><pre class="mart-code">${escapeHtml(solution.code)}</pre>
+    </div>
+  </details>`;
+}
+
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString("pt-BR");
 }
@@ -313,16 +529,21 @@ function formatDate(iso) {
 function renderPage() {
   const C = Mart.CONFIG;
   const pages = {
+    dashboard: renderDashboard(),
+    projetos: renderProjects(),
+    carreira: renderCareer(),
     sistema: `
       <h1>Instruções e objetivo</h1>
       <h2>Objetivo</h2>
-      <p>Treinar JavaScript corrigindo ${ALL_CHALLENGES.length} códigos com defeitos, entendendo a causa de cada erro e fixando os conceitos por repetição.</p>
+      <p>Treinar JavaScript e fundamentos de desenvolvimento web com ${ALL_CHALLENGES.length} lições sequenciais. A calculadora e o site são construídos nas lições 38 a 42, com a plataforma integrada funcionando na lição final.</p>
       <h2>Como usar</h2>
       <ol>
         <li>Escolha uma lição no diretório e leia o enunciado.</li>
         <li>Edite o código e clique em <em>Executar e testar</em>.</li>
         <li>Se travar, use a dica ou o botão do <strong>${C.nome}</strong> para ver a solução completa explicada.</li>
-        <li>Todo conceito resolvido é gravado na <em>Memória do Mart</em> para revisão futura.</li>
+        <li>O sistema grava seu código aprovado, a saída, a data e as tentativas para relembrar como a tarefa foi realizada.</li>
+        <li>As lições são liberadas em sequência. Se tentar abrir uma etapa adiantada, o sistema informa qual lição está pendente.</li>
+        <li>Use o dashboard para acompanhar o andamento e a trilha de carreira para ver os marcos Junior, Pleno, Senior e Engenheiro de Desenvolvimento Web e Plataforma.</li>
       </ol>
       <h2>Sobre o ${C.nome}</h2>
       <p>É o agente interno do sistema. Ele funciona offline: possui a solução e a explicação de cada lição, executa o teste por você, memoriza o que foi aprendido e responde perguntas por palavra-chave.</p>`,
@@ -348,14 +569,20 @@ function renderPage() {
       <h2>Perguntas frequentes</h2>
       <p><strong>O Mart resolve de verdade?</strong> Sim: ele coloca a solução no editor, executa o teste e explica o raciocínio.</p>
       <p><strong>Onde ficam meus dados?</strong> No navegador (localStorage). Limpar dados do site apaga o progresso.</p>
-      <p><strong>Como revisar?</strong> Abra a Memória do Mart; conceitos antigos aparecem marcados como "revisar".</p>
+      <p><strong>Como revisar?</strong> Abra a Memória do Mart ou o Dashboard para consultar conceitos, código executado, saída e data.</p>
+      <p><strong>Posso pular lições?</strong> Não. As lições são liberadas em sequência; o Dashboard mostra a próxima lição pendente.</p>
+      <p><strong>Onde construo a calculadora e o site?</strong> Nas lições 38 a 42. A lição 50 apresenta a plataforma integrada funcionando.</p>
+      <p><strong>Como reiniciar uma lição?</strong> Use "Resetar esta lição" dentro dela. O botão do diretório continua disponível para apagar todo o progresso.</p>
       <p><strong>Pergunta livre:</strong> use o campo "Pergunte ao Senhor Mart" dentro de qualquer lição.</p>`,
     sobre: `
       <h1>Sobre o sistema</h1>
-      <p>Caça aos Bugs JS é uma aplicação estática (HTML, CSS e JavaScript) para praticar depuração em JavaScript, com o assistente interno ${C.nome}.</p>
+      <p>Trilha Web é uma aplicação estática (HTML, CSS e JavaScript) para aprender JavaScript e fundamentos de desenvolvimento web, com o assistente interno ${C.nome}.</p>
       <p>Versão ${C.versao}</p>
       <p><strong>GA automação engenheiro desenvolvedor : Gledison Andrade</strong></p>`,
   };
+  if (state.view === "dashboard" || state.view === "carreira" || state.view === "projetos") {
+    return pages[state.view] || "";
+  }
   return `<main class="page-view">${pages[state.view] || ""}</main>`;
 }
 
@@ -375,7 +602,7 @@ function renderMemoryPage() {
     <p>Conceitos gravados para você relembrar. <button class="text-button" type="button" data-action="clear-memory">Limpar memória</button></p>${list}`;
 }
 
-function runCode(code) {
+async function runCode(code) {
   const logs = [];
   const customConsole = {
     log: (...args) => logs.push(args.map(formatLogValue).join(" ")),
@@ -384,10 +611,12 @@ function runCode(code) {
 
   try {
     const runner = new Function("_customConsole", `
+      return (async () => {
       const console = { log: _customConsole.log, error: _customConsole.error };
       ${code}
+      })();
     `);
-    runner(customConsole);
+    await runner(customConsole);
     return { logs, error: "" };
   } catch (error) {
     return { logs, error: error?.message || String(error) };
@@ -407,10 +636,10 @@ function formatLogValue(value) {
   return String(value);
 }
 
-function testCode() {
+async function testCode() {
   const challenge = getActiveChallenge();
   state.attemptsMap[challenge.id] = (state.attemptsMap[challenge.id] || 0) + 1;
-  const result = runCode(state.editorCode);
+  const result = await runCode(state.editorCode);
   state.terminalLogs = result.logs;
   state.terminalError = result.error;
 
@@ -432,6 +661,7 @@ function testCode() {
 
   state.testResult = { tested: true, success, message };
   if (success) {
+    state.lockedMessage = "";
     Mart.remember(challenge);
     state.showCelebration = true;
     window.setTimeout(() => {
@@ -451,6 +681,14 @@ function testCode() {
         console.error("Não foi possível atualizar a sequência de dias:", error);
       }
     }
+    state.recordsMap[challenge.id] = {
+      id: challenge.id,
+      title: challenge.title,
+      code: state.editorCode,
+      output: result.logs,
+      completedAt: new Date().toISOString(),
+      attempts: state.attemptsMap[challenge.id],
+    };
   }
 
   saveProgress();
@@ -460,8 +698,17 @@ function testCode() {
 function selectChallenge(index) {
   const challenge = ALL_CHALLENGES[index];
   if (!challenge) return;
+  if (!isLessonAccessible(index)) {
+    const stoppedAt = ALL_CHALLENGES[getNextLessonIndex()];
+    state.view = "licoes";
+    state.lockedMessage = `Faça a lição em que você parou para acessar as próximas. Você parou na lição ${stoppedAt.id}: ${stoppedAt.title}.`;
+    render();
+    return;
+  }
   state.currentIndex = index;
-  state.editorCode = challenge.code;
+  state.view = "licoes";
+  state.lockedMessage = "";
+  state.editorCode = state.recordsMap[challenge.id]?.code ?? challenge.code;
   state.terminalLogs = [];
   state.terminalError = "";
   state.testResult = { tested: false, success: false, message: "" };
@@ -473,6 +720,35 @@ function selectChallenge(index) {
 }
 
 root?.addEventListener("submit", (event) => {
+  if (event.target.matches("[data-form='calculator']")) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const a = Number(formData.get("a"));
+    const b = Number(formData.get("b"));
+    const operator = formData.get("operator");
+    const operations = {
+      "+": () => a + b,
+      "-": () => a - b,
+      "*": () => a * b,
+      "/": () => b === 0 ? "Não é possível dividir por zero." : a / b,
+      "%": () => b === 0 ? "Não é possível dividir por zero." : a % b,
+      "**": () => a ** b,
+    };
+    const result = Number.isFinite(a) && Number.isFinite(b) && operations[operator]
+      ? operations[operator]()
+      : "Informe valores numéricos válidos.";
+    state.calculatorResult = typeof result === "number" && !Number.isFinite(result)
+      ? "Resultado fora do intervalo numérico."
+      : String(result);
+    render();
+    return;
+  }
+  if (event.target.matches("[data-form='project-search']")) {
+    event.preventDefault();
+    state.projectSearch = String(new FormData(event.target).get("q") || "");
+    render();
+    return;
+  }
   if (!event.target.matches("[data-form='mart-ask']")) return;
   event.preventDefault();
   state.martAnswer = Mart.ask(new FormData(event.target).get("q") || "", ALL_CHALLENGES);
@@ -490,7 +766,11 @@ root?.addEventListener("click", async (event) => {
   switch (button.dataset.action) {
     case "go-view":
       state.view = button.dataset.view;
+      state.lockedMessage = "";
       render();
+      break;
+    case "continue-learning":
+      selectChallenge(getNextLessonIndex());
       break;
     case "mart-solve": {
       const challenge = getActiveChallenge();
@@ -499,7 +779,7 @@ root?.addEventListener("click", async (event) => {
       state.editorCode = solution.code;
       state.martExplain = { id: challenge.id };
       Mart.remember(challenge);
-      testCode();
+      await testCode();
       break;
     }
     case "clear-memory":
@@ -518,10 +798,45 @@ root?.addEventListener("click", async (event) => {
       selectChallenge(state.currentIndex + 1);
       break;
     case "run":
-      testCode();
+      await testCode();
       break;
     case "restore":
-      selectChallenge(state.currentIndex);
+      state.editorCode = getActiveChallenge().code;
+      state.terminalLogs = [];
+      state.terminalError = "";
+      state.testResult = { tested: false, success: false, message: "" };
+      state.aiTip = "";
+      render();
+      break;
+    case "reset-lesson": {
+      const challenge = getActiveChallenge();
+      if (window.confirm(`Resetar a lição ${challenge.id} e apagar seu registro, tentativas e memória associada?`)) {
+        state.resolvedIds = state.resolvedIds.filter((id) => id !== challenge.id);
+        delete state.attemptsMap[challenge.id];
+        delete state.recordsMap[challenge.id];
+        Mart.forget(challenge.id);
+        state.editorCode = challenge.code;
+        state.terminalLogs = [];
+        state.terminalError = "";
+        state.testResult = { tested: false, success: false, message: "" };
+        state.aiTip = "";
+        state.martExplain = null;
+        saveProgress();
+        selectChallenge(state.currentIndex);
+      }
+      break;
+    }
+    case "automation-run":
+      if (state.automationIndex < AUTOMATION_TASKS.length) {
+        state.automationLogs.push(`Concluída: ${AUTOMATION_TASKS[state.automationIndex]}`);
+        state.automationIndex += 1;
+        render();
+      }
+      break;
+    case "automation-reset":
+      state.automationIndex = 0;
+      state.automationLogs = [];
+      render();
       break;
     case "hint": {
       const outcome = state.terminalError
@@ -551,8 +866,10 @@ root?.addEventListener("click", async (event) => {
       if (window.confirm("Deseja realmente apagar seu progresso e suas estatísticas?")) {
         state.resolvedIds = [];
         state.attemptsMap = {};
+        state.recordsMap = {};
         state.streak = 1;
         state.currentIndex = 0;
+        state.lockedMessage = "";
         state.editorCode = ALL_CHALLENGES[0]?.code ?? "";
         state.terminalLogs = [];
         state.terminalError = "";

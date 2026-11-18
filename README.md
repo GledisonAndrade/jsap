@@ -1,6 +1,10 @@
-# Caça aos Bugs JS
+# Trilha Web
 
-Aplicação estática para praticar JavaScript com 35 desafios interativos. A interface usa apenas HTML, CSS e JavaScript nativo; não precisa de backend, dependências ou etapa de compilação. Os scripts são carregados sem módulos para funcionar tanto ao abrir `index.html` diretamente quanto por um servidor local. O progresso fica salvo no armazenamento local do navegador.
+Aplicação estática para aprender JavaScript e fundamentos de desenvolvimento web com 50 lições interativas, liberadas em sequência. As lições 38–42 guiam a construção de uma calculadora e de um catálogo de site; a lição 50 apresenta a plataforma integrada funcionando. O laboratório independente fica dedicado ao automatizador de tarefas. O dashboard acompanha o progresso e registra código aprovado, saída, data e tentativas no armazenamento local do navegador. A trilha de carreira apresenta marcos Junior, Pleno, Senior e Engenheiro de Desenvolvimento Web e Plataforma.
+
+A interface usa apenas HTML, CSS e JavaScript nativo; não precisa de backend, dependências ou etapa de compilação. Os scripts são carregados sem módulos para funcionar tanto ao abrir `index.html` diretamente quanto por um servidor local.
+
+O progresso é local ao navegador e não é sincronizado entre dispositivos. É possível resetar uma lição individualmente ou apagar todo o progresso.
 
 ## Usar no XAMPP
 
