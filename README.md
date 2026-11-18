@@ -6,6 +6,8 @@ A interface usa apenas HTML, CSS e JavaScript nativo; não precisa de backend, d
 
 O progresso é local ao navegador e não é sincronizado entre dispositivos. É possível resetar uma lição individualmente ou apagar todo o progresso.
 
+O editor salva rascunhos automaticamente e permite inserir comentários JavaScript (`//`). Cada lição também possui um campo de anotações pessoais salvo automaticamente e consultável no Dashboard. O logotipo da plataforma é servido em `assets/trilha-web-logo.png`.
+
 ## Usar no XAMPP
 
 1. Coloque a pasta `jsap` em `htdocs`.

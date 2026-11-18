@@ -64,17 +64,14 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 }
 
 .brand-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
+  display: block;
+  width: 48px;
+  height: 48px;
   flex: 0 0 auto;
-  place-items: center;
-  border-radius: 13px;
-  background: linear-gradient(135deg, #25cde0, #f4b650);
-  color: #06111d;
-  font-size: 19px;
-  font-weight: 800;
-  box-shadow: 0 8px 28px rgba(28, 181, 205, .14);
+  border: 1px solid rgba(244, 186, 73, .24);
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 8px 28px rgba(244, 186, 73, .12);
 }
 
 .brand-copy { min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px; }
@@ -278,6 +275,13 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 }
 .code-editor:focus-visible { outline: 2px solid rgba(55, 209, 229, .6); outline-offset: -2px; }
 .editor-help { padding: 8px 14px 0; background: #0d1220; color: #78849a; font-size: 10px; }
+.study-note-panel { display: grid; gap: 7px; padding: 12px 14px; border-top: 1px solid var(--border); background: #0d1220; }
+.study-note-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.study-note-heading label { color: #cbd6e5; font-size: 11px; font-weight: 650; }
+.study-note-heading span, #study-note-help { color: #77849b; font-size: 9px; }
+.study-note-editor { display: block; width: 100%; min-height: 82px; resize: vertical; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #080b13; color: #d3def0; font-family: var(--mono); font-size: 11px; line-height: 1.6; }
+.study-note-editor::placeholder { color: #69758a; }
+#study-note-help { line-height: 1.5; }
 .editor-actions { justify-content: space-between; flex-wrap: wrap; gap: 9px; padding: 13px 14px; background: #0d1220; }
 .primary-button, .hint-button {
   display: inline-flex;
@@ -345,7 +349,7 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 
 @media (max-width: 680px) {
   .topbar { position: relative; align-items: flex-start; gap: 12px; padding: 12px 14px; }
-  .brand-mark { width: 36px; height: 36px; border-radius: 11px; font-size: 16px; }
+  .brand-mark { width: 40px; height: 40px; border-radius: 10px; }
   .brand { gap: 9px; }
   .brand-title { flex-wrap: wrap; gap: 5px; font-size: 14px; }
   .brand-subtitle { max-width: 240px; font-size: 10px; line-height: 1.35; }
@@ -431,6 +435,13 @@ button:focus-visible, textarea:focus-visible, a:focus-visible {
 .history-item { margin-top: 11px; padding: 14px; }
 .history-item .memory-head { align-items: flex-start; }
 .history-item p { color: #b9c4d5; font-size: 11px; }
+.history-item .history-note { padding: 9px 10px; border-left: 2px solid rgba(244, 186, 73, .45); background: rgba(244, 186, 73, .05); white-space: pre-wrap; overflow-wrap: anywhere; }
+.study-notes-dashboard { margin-top: 22px; }
+.study-notes-dashboard > h2 { font-size: 16px; }
+.study-note-entry { margin-top: 10px; padding: 13px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-raised); }
+.study-note-entry > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.study-note-entry strong { color: #dce5f2; font-size: 11px; }
+.study-note-entry p { margin: 8px 0 0; color: #b9c4d5; font-size: 11px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .history-item details summary, .support-card summary { color: #9deaf2; cursor: pointer; font-size: 11px; font-weight: 650; }
 .history-item > .text-button { margin-top: 8px; }
 .empty-state { padding: 18px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); }

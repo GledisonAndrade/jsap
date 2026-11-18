@@ -11,6 +11,8 @@ const state = {
   resolvedIds: [],
   attemptsMap: {},
   recordsMap: {},
+  draftsMap: {},
+  studyNotesMap: {},
   streak: 1,
   aiTip: "",
   copied: false,
@@ -52,6 +54,12 @@ function loadProgress() {
     if (parsed.recordsMap && typeof parsed.recordsMap === "object") {
       state.recordsMap = parsed.recordsMap;
     }
+    if (parsed.draftsMap && typeof parsed.draftsMap === "object") {
+      state.draftsMap = parsed.draftsMap;
+    }
+    if (parsed.studyNotesMap && typeof parsed.studyNotesMap === "object") {
+      state.studyNotesMap = parsed.studyNotesMap;
+    }
     if (typeof parsed.streak === "number") state.streak = parsed.streak;
   } catch (error) {
     console.error("Não foi possível carregar o progresso salvo:", error);
@@ -59,7 +67,9 @@ function loadProgress() {
 
   state.currentIndex = getNextLessonIndex();
   const challenge = ALL_CHALLENGES[state.currentIndex];
-  state.editorCode = state.recordsMap[challenge.id]?.code ?? challenge.code;
+  state.editorCode = state.recordsMap[challenge.id]?.code
+    ?? state.draftsMap[challenge.id]
+    ?? challenge.code;
 }
 
 function saveProgress() {
@@ -68,6 +78,8 @@ function saveProgress() {
       resolvedIds: state.resolvedIds,
       attemptsMap: state.attemptsMap,
       recordsMap: state.recordsMap,
+      draftsMap: state.draftsMap,
+      studyNotesMap: state.studyNotesMap,
       streak: state.streak,
     }));
   } catch (error) {
@@ -185,7 +197,7 @@ function render() {
       </div>` : ""}
     <header class="topbar">
       <a class="brand" href="./" aria-label="Trilha Web - início">
-        <span class="brand-mark" aria-hidden="true">JS</span>
+        <img class="brand-mark" src="./assets/trilha-web-logo.png" alt="" width="48" height="48" />
         <span class="brand-copy">
           <span class="brand-title">Trilha Web <span class="challenge-badge">${totalChallenges} lições</span></span>
           <span class="brand-subtitle">Aprenda JavaScript e desenvolvimento web com prática</span>
@@ -257,13 +269,21 @@ function render() {
               <div><span class="panel-icon" aria-hidden="true">&lt;/&gt;</span><h2>Seu código</h2></div>
               <div class="editor-tools">
                 <button class="text-button" type="button" data-action="copy-original">${state.copied ? "Copiado ✓" : "Copiar original"}</button>
+                <button class="text-button" type="button" data-action="insert-comment">Inserir comentário //</button>
                 <button class="text-button restore-button" type="button" data-action="restore">Restaurar</button>
               </div>
             </div>
             <label class="visually-hidden" for="code-editor">Código JavaScript do desafio</label>
             <textarea id="code-editor" class="code-editor" spellcheck="false" autocapitalize="off"
               autocomplete="off" autocorrect="off" aria-describedby="editor-help">${escapeHtml(state.editorCode)}</textarea>
-            <div id="editor-help" class="editor-help">Edite o código acima e execute os testes.</div>
+            <div id="editor-help" class="editor-help">Edite e comente seu código com // ou /* ... */. Suas alterações são salvas nesta lição.</div>
+            <section class="study-note-panel">
+              <div class="study-note-heading"><label for="study-note">Minhas notas e comentários</label><span>Salvo automaticamente</span></div>
+              <textarea id="study-note" class="study-note-editor" data-lesson-id="${challenge.id}"
+                placeholder="Anote o que aprendeu, explique uma linha ou registre uma dúvida..."
+                aria-describedby="study-note-help">${escapeHtml(state.studyNotesMap[challenge.id] || "")}</textarea>
+              <small id="study-note-help">Estas anotações ficam vinculadas à lição. Você também pode inserir um comentário JavaScript no editor.</small>
+            </section>
             <div class="editor-actions">
               <button class="primary-button" type="button" data-action="run">▶ <span>Executar e testar</span></button>
               <button class="hint-button" type="button" data-action="hint"><span aria-hidden="true">✦</span> Ver dica de correção</button>
@@ -353,6 +373,7 @@ function renderDashboard() {
         <span>${formatDate(record.completedAt)} · ${record.attempts} tentativa(s)</span>
       </div>
       <p><strong>Saída registrada:</strong> ${escapeHtml((record.output || []).join(" / "))}</p>
+      ${record.note ? `<p class="history-note"><strong>Anotação salva:</strong> ${escapeHtml(record.note)}</p>` : ""}
       <details><summary>Relembrar código realizado</summary><pre class="mart-code">${escapeHtml(record.code)}</pre></details>
       <button class="text-button" type="button" data-action="select-challenge" data-index="${ALL_CHALLENGES.findIndex((item) => item.id === record.id)}">Abrir lição</button>
     </article>`).join("") : '<p class="empty-state">Conclua uma lição para criar seu primeiro registro de execução.</p>';
@@ -376,7 +397,25 @@ function renderDashboard() {
       <button class="primary-button" type="button" data-action="continue-learning">Continuar lição</button>
     </section>` : '<section class="continue-card"><div><span class="eyebrow">Parabéns</span><h2>Você concluiu todas as lições!</h2><p>Seu projeto final está disponível na lição 50.</p></div></section>'}
     <section class="history-section"><div class="section-title"><h2>Tarefas executadas</h2><span>${records.length} registro(s)</span></div>${history}</section>
+    ${renderStudyNotes()}
   </main>`;
+}
+
+function renderStudyNotes() {
+  const notes = Object.entries(state.studyNotesMap)
+    .filter(([, note]) => typeof note === "string" && note.trim())
+    .sort(([firstId], [secondId]) => Number(firstId) - Number(secondId));
+  if (!notes.length) {
+    return `<section class="study-notes-dashboard"><h2>Notas de estudo</h2><p class="empty-state">Suas anotações por lição aparecerão aqui. Abra uma lição e registre comentários sobre o código.</p></section>`;
+  }
+  const entries = notes.map(([id, note]) => {
+    const challenge = ALL_CHALLENGES.find((item) => item.id === Number(id));
+    if (!challenge) return "";
+    return `<article class="study-note-entry"><div><strong>Lição ${challenge.id}: ${escapeHtml(challenge.title)}</strong>
+      <button class="text-button" type="button" data-action="select-challenge" data-index="${challenge.id - 1}">Abrir lição</button></div>
+      <p>${escapeHtml(note)}</p></article>`;
+  }).join("");
+  return `<section class="study-notes-dashboard"><div class="section-title"><h2>Notas de estudo</h2><span>${notes.length} lição(ões)</span></div>${entries}</section>`;
 }
 
 function renderCareer() {
@@ -543,6 +582,7 @@ function renderPage() {
         <li>Se travar, use a dica ou o botão do <strong>${C.nome}</strong> para ver a solução completa explicada.</li>
         <li>O sistema grava seu código aprovado, a saída, a data e as tentativas para relembrar como a tarefa foi realizada.</li>
         <li>As lições são liberadas em sequência. Se tentar abrir uma etapa adiantada, o sistema informa qual lição está pendente.</li>
+        <li>Comente o código diretamente com <code>//</code> ou <code>/* ... */</code> e escreva suas próprias notas na área da lição. O editor e as anotações ficam salvos automaticamente.</li>
         <li>Use o dashboard para acompanhar o andamento e a trilha de carreira para ver os marcos Junior, Pleno, Senior e Engenheiro de Desenvolvimento Web e Plataforma.</li>
       </ol>
       <h2>Sobre o ${C.nome}</h2>
@@ -570,6 +610,7 @@ function renderPage() {
       <p><strong>O Mart resolve de verdade?</strong> Sim: ele coloca a solução no editor, executa o teste e explica o raciocínio.</p>
       <p><strong>Onde ficam meus dados?</strong> No navegador (localStorage). Limpar dados do site apaga o progresso.</p>
       <p><strong>Como revisar?</strong> Abra a Memória do Mart ou o Dashboard para consultar conceitos, código executado, saída e data.</p>
+      <p><strong>Como comentar o código?</strong> Use o botão "Inserir comentário //" no editor ou escreva comentários JavaScript diretamente. Use também o campo de notas para registrar explicações e dúvidas; o sistema salva tudo automaticamente por lição.</p>
       <p><strong>Posso pular lições?</strong> Não. As lições são liberadas em sequência; o Dashboard mostra a próxima lição pendente.</p>
       <p><strong>Onde construo a calculadora e o site?</strong> Nas lições 38 a 42. A lição 50 apresenta a plataforma integrada funcionando.</p>
       <p><strong>Como reiniciar uma lição?</strong> Use "Resetar esta lição" dentro dela. O botão do diretório continua disponível para apagar todo o progresso.</p>
@@ -688,6 +729,7 @@ async function testCode() {
       output: result.logs,
       completedAt: new Date().toISOString(),
       attempts: state.attemptsMap[challenge.id],
+      note: state.studyNotesMap[challenge.id] || "",
     };
   }
 
@@ -708,7 +750,9 @@ function selectChallenge(index) {
   state.currentIndex = index;
   state.view = "licoes";
   state.lockedMessage = "";
-  state.editorCode = state.recordsMap[challenge.id]?.code ?? challenge.code;
+  state.editorCode = state.recordsMap[challenge.id]?.code
+    ?? state.draftsMap[challenge.id]
+    ?? challenge.code;
   state.terminalLogs = [];
   state.terminalError = "";
   state.testResult = { tested: false, success: false, message: "" };
@@ -756,7 +800,17 @@ root?.addEventListener("submit", (event) => {
 });
 
 root?.addEventListener("input", (event) => {
-  if (event.target.matches("#code-editor")) state.editorCode = event.target.value;
+  if (event.target.matches("#code-editor")) {
+    state.editorCode = event.target.value;
+    state.draftsMap[getActiveChallenge().id] = state.editorCode;
+    saveProgress();
+  }
+  if (event.target.matches("#study-note")) {
+    const challengeId = getActiveChallenge().id;
+    state.studyNotesMap[challengeId] = event.target.value;
+    if (state.recordsMap[challengeId]) state.recordsMap[challengeId].note = event.target.value;
+    saveProgress();
+  }
 });
 
 root?.addEventListener("click", async (event) => {
@@ -802,18 +856,35 @@ root?.addEventListener("click", async (event) => {
       break;
     case "restore":
       state.editorCode = getActiveChallenge().code;
+      state.draftsMap[getActiveChallenge().id] = state.editorCode;
       state.terminalLogs = [];
       state.terminalError = "";
       state.testResult = { tested: false, success: false, message: "" };
       state.aiTip = "";
+      saveProgress();
       render();
       break;
+    case "insert-comment": {
+      const editor = root.querySelector("#code-editor");
+      if (!editor) break;
+      const beforeCursor = editor.value.slice(0, editor.selectionStart);
+      const prefix = beforeCursor && !beforeCursor.endsWith("\n") ? "\n" : "";
+      const comment = `${prefix}// Anotação: \n`;
+      editor.setRangeText(comment, editor.selectionStart, editor.selectionEnd, "end");
+      state.editorCode = editor.value;
+      state.draftsMap[getActiveChallenge().id] = state.editorCode;
+      saveProgress();
+      editor.focus();
+      break;
+    }
     case "reset-lesson": {
       const challenge = getActiveChallenge();
-      if (window.confirm(`Resetar a lição ${challenge.id} e apagar seu registro, tentativas e memória associada?`)) {
+      if (window.confirm(`Resetar a lição ${challenge.id} e apagar seu registro, rascunho, anotações, tentativas e memória associada?`)) {
         state.resolvedIds = state.resolvedIds.filter((id) => id !== challenge.id);
         delete state.attemptsMap[challenge.id];
         delete state.recordsMap[challenge.id];
+        delete state.draftsMap[challenge.id];
+        delete state.studyNotesMap[challenge.id];
         Mart.forget(challenge.id);
         state.editorCode = challenge.code;
         state.terminalLogs = [];
@@ -867,6 +938,8 @@ root?.addEventListener("click", async (event) => {
         state.resolvedIds = [];
         state.attemptsMap = {};
         state.recordsMap = {};
+        state.draftsMap = {};
+        state.studyNotesMap = {};
         state.streak = 1;
         state.currentIndex = 0;
         state.lockedMessage = "";
